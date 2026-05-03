@@ -74,6 +74,8 @@ const FrequenciaAulas: React.FC = () => {
     for (let dia = 1; dia <= diasMes; dia++) {
       if (frequencias[alunoId]?.[dia] === 'F') faltas++;
     }
+    // Log para depuração
+    console.log(`Aluno ${alunoId} faltas:`, faltas, frequencias[alunoId]);
     return faltas;
   };
 
@@ -211,67 +213,86 @@ const FrequenciaAulas: React.FC = () => {
       try {
         console.log('🚀 CARREGANDO TUDO EM UMA ÚNICA CHAMADA!');
         console.log(`📍 Turma: ${turmaId}, Mês: ${mes}, Ano: ${ano}`);
-        
+
         // ⚡ UMA ÚNICA CHAMADA QUE TRAZ TUDO!
         const url = `http://localhost:8080/turmas/${turmaId}/dados-completos?mes=${mes}&ano=${ano}`;
         const response = await fetch(url);
-        
+
         if (!response.ok) {
           // Se der erro, volta pro método antigo temporariamente
           console.warn('⚠️ Endpoint dados-completos falhou, usando método antigo...');
-          
+
           // Método antigo de fallback
           const resAlunos = await fetch('http://localhost:8080/alunos');
-          const todosAlunos = await resAlunos.json();
+          let todosAlunos = [];
+          if (resAlunos.ok) {
+            const text = await resAlunos.text();
+            todosAlunos = text ? JSON.parse(text) : [];
+          }
           const alunosDaTurma = todosAlunos.filter((a: Aluno) => a.turmaId === Number(turmaId));
           setAlunos(alunosDaTurma);
-          
+
           const dataInicio = `${ano}-${String(mes).padStart(2, '0')}-01`;
           const ultimoDia = getDiasDoMes();
           const dataFim = `${ano}-${String(mes).padStart(2, '0')}-${String(ultimoDia).padStart(2, '0')}`;
-          
+
           const resFreq = await fetch(
             `http://localhost:8080/frequencias?turmaId=${turmaId}&dataInicio=${dataInicio}&dataFim=${dataFim}`
           );
-          const dataFreq = await resFreq.json();
-          
+          let dataFreq = [];
+          if (resFreq.ok) {
+            const text = await resFreq.text();
+            dataFreq = text ? JSON.parse(text) : [];
+          }
+
           const freqInicial: Record<number, Record<number, string>> = {};
           const diasMes = getDiasDoMes();
-          
+
           alunosDaTurma.forEach((aluno: Aluno) => {
             freqInicial[aluno.id] = {};
             for (let i = 1; i <= diasMes; i++) {
               freqInicial[aluno.id][i] = 'C';
             }
           });
-          
+
           dataFreq.forEach((freq: FrequenciaResponse) => {
             const dia = new Date(freq.data).getDate();
             if (freqInicial[freq.aluno.id]) {
               freqInicial[freq.aluno.id][dia] = freq.status;
             }
           });
-          
+
           setFrequencias(freqInicial);
-          
+
           const resChamadas = await fetch(
             `http://localhost:8080/chamada-confirmada?turmaId=${turmaId}&dataInicio=${dataInicio}&dataFim=${dataFim}`
           );
           if (resChamadas.ok) {
-            const chamadasConfirmadas = await resChamadas.json();
-            const diasConfirmados = new Set<number>();
-            chamadasConfirmadas.forEach((chamada: any) => {
-              const dia = new Date(chamada.dataChamada).getDate();
-              diasConfirmados.add(dia);
-            });
-            setDiasDesbloqueados(diasConfirmados);
+            const text = await resChamadas.text();
+            if (text) {
+              const chamadasConfirmadas = JSON.parse(text);
+              const diasConfirmados = new Set<number>();
+              chamadasConfirmadas.forEach((chamada: any) => {
+                const dia = new Date(chamada.dataChamada).getDate();
+                diasConfirmados.add(dia);
+              });
+              setDiasDesbloqueados(diasConfirmados);
+            } else {
+              setDiasDesbloqueados(new Set());
+            }
+          } else {
+            setDiasDesbloqueados(new Set());
           }
-          
+
           return;
         }
         
         // ✅ SUCESSO - Processar dados da ÚNICA chamada
-        const dadosCompletos = await response.json();
+        let dadosCompletos = {};
+        const text = await response.text();
+        if (text) {
+          dadosCompletos = JSON.parse(text);
+        }
         
         console.log('✅ DADOS RECEBIDOS EM UMA ÚNICA CHAMADA:', {
           alunos: dadosCompletos.alunos?.length || 0,
@@ -295,14 +316,22 @@ const FrequenciaAulas: React.FC = () => {
           }
         });
         
-        // Aplicar as frequências do banco
+        // Aplicar as frequências do banco, filtrando pelo mês e ano selecionados
         (dadosCompletos.frequencias || []).forEach((freq: FrequenciaResponse) => {
-          const dia = new Date(freq.data).getDate();
-          if (freqInicial[freq.aluno.id]) {
+          const dataObj = new Date(freq.data);
+          const dia = dataObj.getDate();
+          const mesFreq = dataObj.getMonth() + 1;
+          const anoFreq = dataObj.getFullYear();
+          if (
+            freqInicial[freq.aluno.id] &&
+            mesFreq === mes &&
+            anoFreq === ano
+          ) {
             freqInicial[freq.aluno.id][dia] = freq.status;
           }
         });
         
+        console.log('Frequências finais por aluno:', freqInicial);
         setFrequencias(freqInicial);
         
         // 3️⃣ Processar CHAMADAS CONFIRMADAS (checkboxes)
