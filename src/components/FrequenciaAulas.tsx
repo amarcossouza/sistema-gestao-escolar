@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Box,
   Container,
@@ -20,33 +20,40 @@ import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 interface Turma {
   id: number;
   nome: string;
+  periodo: string;
 }
 
 interface Aluno {
   id: number;
   nome: string;
+  turmaId: number;
 }
 
-interface Frequencia {
-  alunoId: number;
-  turmaId: number;
-  dia: number;
+interface FrequenciaResponse {
+  id: number;
+  aluno: Aluno;
+  turma: Turma;
   data: string;
   status: string;
 }
 
+const periodos = ['Manha', 'Tarde', 'Noite'];
+
 const FrequenciaAulas: React.FC = () => {
-  const [periodo, setPeriodo] = useState<string>('Manha');
+  // Estado geral
+  const [periodo, setPeriodo] = useState<string>('');
   const [turmaId, setTurmaId] = useState<number | string>('');
   const [mes, setMes] = useState<number>(new Date().getMonth() + 1);
   const [ano, setAno] = useState<number>(new Date().getFullYear());
   
-  const [turmas, setTurmas] = useState<Turma[]>([]);
+  // Dados
+  const [todasAsTurmas, setTodasAsTurmas] = useState<Turma[]>([]);
+  const [turmasDoPerido, setTurmasDoPerido] = useState<Turma[]>([]);
   const [alunos, setAlunos] = useState<Aluno[]>([]);
   const [frequencias, setFrequencias] = useState<Record<number, Record<number, string>>>({});
   const [diasDesbloqueados, setDiasDesbloqueados] = useState<Set<number>>(new Set());
 
-  // ===== FUNÇÕES DE CÁLCULO (DECLARAR PRIMEIRO) =====
+  // ===== FUNÇÕES UTILITÁRIAS =====
   const getDiasDoMes = useCallback((): number => {
     return new Date(ano, mes, 0).getDate();
   }, [ano, mes]);
@@ -57,23 +64,34 @@ const FrequenciaAulas: React.FC = () => {
     return diasNomes[data.getDay()];
   };
 
-  const getDataInicio = useCallback((): string => {
-    return new Date(ano, mes - 1, 1).toISOString().split('T')[0];
-  }, [ano, mes]);
+  // Removido getDataInicio e getDataFim - não são mais necessárias
+  // O endpoint dados-completos já calcula as datas baseado em mes e ano
 
-  const getDataFim = useCallback((): string => {
-    return new Date(ano, mes, 0).toISOString().split('T')[0];
-  }, [ano, mes]);
-
+  // Conta faltas apenas nos dias exibidos no mês
   const contarFaltas = (alunoId: number): number => {
-    return Object.values(frequencias[alunoId] || {}).filter(f => f === 'F').length;
+    const diasMes = getDiasDoMes();
+    let faltas = 0;
+    for (let dia = 1; dia <= diasMes; dia++) {
+      if (frequencias[alunoId]?.[dia] === 'F') faltas++;
+    }
+    return faltas;
   };
 
   const toggleDia = (dia: number) => {
     const novosDias = new Set(diasDesbloqueados);
     if (novosDias.has(dia)) {
+      // Se está desmarcando, remove
       novosDias.delete(dia);
+      
+      // Remove confirmação da chamada (opcional - backend tem DELETE mas diz que é só admin)
+      const dataChamada = new Date(ano, mes - 1, dia).toISOString().split('T')[0];
+      fetch(`http://localhost:8080/chamada-confirmada?turmaId=${turmaId}&dataChamada=${dataChamada}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      }).catch(e => console.log('Não foi possível remover confirmação:', e));
+      
     } else {
+      // Se está marcando, adiciona
       novosDias.add(dia);
       setFrequencias(prev => {
         const novo = { ...prev };
@@ -82,6 +100,41 @@ const FrequenciaAulas: React.FC = () => {
           if (novo[aluno.id][dia] === undefined) novo[aluno.id][dia] = 'C';
         });
         return novo;
+      });
+      
+      // ✅ SALVA CONFIRMAÇÃO DA CHAMADA NO BACKEND
+      const dataChamada = new Date(ano, mes - 1, dia).toISOString().split('T')[0];
+      const dataHoraConfirmacao = new Date().toISOString();
+      const emailProfessor = localStorage.getItem('userEmail') || 'professor@escola.com';
+      
+      const payload = {
+        turmaId: Number(turmaId),
+        dataChamada: dataChamada,
+        dataHoraConfirmacao: dataHoraConfirmacao,
+        emailProfessor: emailProfessor
+      };
+      
+      console.log('📤 Confirmando chamada:', payload);
+      
+      fetch('http://localhost:8080/chamada-confirmada', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(r => {
+        if (r.ok) {
+          console.log('✅ Chamada confirmada para dia', dia);
+          return r.json();
+        } else {
+          throw new Error('Erro ao confirmar chamada');
+        }
+      })
+      .then(data => {
+        console.log('✅ Resposta do servidor:', data);
+      })
+      .catch(e => {
+        console.error('❌ Erro ao confirmar chamada:', e);
+        alert('Erro ao confirmar chamada. Tente novamente.');
       });
     }
     setDiasDesbloqueados(novosDias);
@@ -101,8 +154,12 @@ const FrequenciaAulas: React.FC = () => {
 
     const dataClicada = new Date(ano, mes - 1, dia).toISOString().split('T')[0];
     const payload = {
-      alunoId: alunoId,
-      turmaId: turmaId,
+      aluno: {
+        id: alunoId
+      },
+      turma: {
+        id: turmaId
+      },
       data: dataClicada,
       status: novoStatus
     };
@@ -115,53 +172,158 @@ const FrequenciaAulas: React.FC = () => {
   };
 
   // ===== EFFECTS =====
+
+  // 1. Carregar TODAS as turmas
   useEffect(() => {
     fetch('http://localhost:8080/turmas')
       .then(r => r.json())
-      .then(setTurmas)
+      .then(data => {
+        setTodasAsTurmas(Array.isArray(data) ? data : []);
+        console.log('Turmas carregadas:', data);
+      })
       .catch(e => console.error('Erro turmas:', e));
   }, []);
 
+  // 2. Filtrar turmas por PERÍODO
+  const turmasFiltradasPorPeriodo = useMemo(() => {
+    return periodo
+      ? todasAsTurmas.filter(t => 
+          t.periodo?.toLowerCase().trim() === periodo.toLowerCase().trim()
+        )
+      : [];
+  }, [periodo, todasAsTurmas]);
+
+  useEffect(() => {
+    setTurmasDoPerido(turmasFiltradasPorPeriodo);
+    setTurmaId('');
+  }, [turmasFiltradasPorPeriodo]);
+
+  // 3. ⚡ CHAMADA ÚNICA - Carregar TUDO quando TURMA, MÊS ou ANO mudam
   useEffect(() => {
     if (!turmaId) {
+      setAlunos([]);
+      setFrequencias({});
+      setDiasDesbloqueados(new Set());
       return;
     }
 
     (async () => {
       try {
-        const resAlunos = await fetch(`http://localhost:8080/alunos?turmaId=${turmaId}`);
-        const dataAlunos = await resAlunos.json();
-        setAlunos(dataAlunos);
-
+        console.log('🚀 CARREGANDO TUDO EM UMA ÚNICA CHAMADA!');
+        console.log(`📍 Turma: ${turmaId}, Mês: ${mes}, Ano: ${ano}`);
+        
+        // ⚡ UMA ÚNICA CHAMADA QUE TRAZ TUDO!
+        const url = `http://localhost:8080/turmas/${turmaId}/dados-completos?mes=${mes}&ano=${ano}`;
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+          // Se der erro, volta pro método antigo temporariamente
+          console.warn('⚠️ Endpoint dados-completos falhou, usando método antigo...');
+          
+          // Método antigo de fallback
+          const resAlunos = await fetch('http://localhost:8080/alunos');
+          const todosAlunos = await resAlunos.json();
+          const alunosDaTurma = todosAlunos.filter((a: Aluno) => a.turmaId === Number(turmaId));
+          setAlunos(alunosDaTurma);
+          
+          const dataInicio = `${ano}-${String(mes).padStart(2, '0')}-01`;
+          const ultimoDia = getDiasDoMes();
+          const dataFim = `${ano}-${String(mes).padStart(2, '0')}-${String(ultimoDia).padStart(2, '0')}`;
+          
+          const resFreq = await fetch(
+            `http://localhost:8080/frequencias?turmaId=${turmaId}&dataInicio=${dataInicio}&dataFim=${dataFim}`
+          );
+          const dataFreq = await resFreq.json();
+          
+          const freqInicial: Record<number, Record<number, string>> = {};
+          const diasMes = getDiasDoMes();
+          
+          alunosDaTurma.forEach((aluno: Aluno) => {
+            freqInicial[aluno.id] = {};
+            for (let i = 1; i <= diasMes; i++) {
+              freqInicial[aluno.id][i] = 'C';
+            }
+          });
+          
+          dataFreq.forEach((freq: FrequenciaResponse) => {
+            const dia = new Date(freq.data).getDate();
+            if (freqInicial[freq.aluno.id]) {
+              freqInicial[freq.aluno.id][dia] = freq.status;
+            }
+          });
+          
+          setFrequencias(freqInicial);
+          
+          const resChamadas = await fetch(
+            `http://localhost:8080/chamada-confirmada?turmaId=${turmaId}&dataInicio=${dataInicio}&dataFim=${dataFim}`
+          );
+          if (resChamadas.ok) {
+            const chamadasConfirmadas = await resChamadas.json();
+            const diasConfirmados = new Set<number>();
+            chamadasConfirmadas.forEach((chamada: any) => {
+              const dia = new Date(chamada.dataChamada).getDate();
+              diasConfirmados.add(dia);
+            });
+            setDiasDesbloqueados(diasConfirmados);
+          }
+          
+          return;
+        }
+        
+        // ✅ SUCESSO - Processar dados da ÚNICA chamada
+        const dadosCompletos = await response.json();
+        
+        console.log('✅ DADOS RECEBIDOS EM UMA ÚNICA CHAMADA:', {
+          alunos: dadosCompletos.alunos?.length || 0,
+          frequencias: dadosCompletos.frequencias?.length || 0,
+          chamadasConfirmadas: dadosCompletos.chamadasConfirmadas?.length || 0
+        });
+        
+        // 1️⃣ Setar os ALUNOS
+        const alunosDaTurma = dadosCompletos.alunos || [];
+        setAlunos(alunosDaTurma);
+        
+        // 2️⃣ Processar FREQUÊNCIAS
         const freqInicial: Record<number, Record<number, string>> = {};
         const diasMes = getDiasDoMes();
-        dataAlunos.forEach((aluno: Aluno) => {
+        
+        // Inicializar com "C" (presente)
+        alunosDaTurma.forEach((aluno: Aluno) => {
           freqInicial[aluno.id] = {};
           for (let i = 1; i <= diasMes; i++) {
             freqInicial[aluno.id][i] = 'C';
           }
         });
-
-        const dataInicio = getDataInicio();
-        const dataFim = getDataFim();
-        const resFreq = await fetch(
-          `http://localhost:8080/frequencias?turmaId=${turmaId}&dataInicio=${dataInicio}&dataFim=${dataFim}`
-        );
-        const dataFreq = await resFreq.json();
-
-        dataFreq.forEach((freq: Frequencia) => {
-          if (freqInicial[freq.alunoId]) {
-            freqInicial[freq.alunoId][freq.dia] = freq.status;
+        
+        // Aplicar as frequências do banco
+        (dadosCompletos.frequencias || []).forEach((freq: FrequenciaResponse) => {
+          const dia = new Date(freq.data).getDate();
+          if (freqInicial[freq.aluno.id]) {
+            freqInicial[freq.aluno.id][dia] = freq.status;
           }
         });
-
+        
         setFrequencias(freqInicial);
-        setDiasDesbloqueados(new Set());
+        
+        // 3️⃣ Processar CHAMADAS CONFIRMADAS (checkboxes)
+        const diasConfirmados = new Set<number>();
+        (dadosCompletos.chamadasConfirmadas || []).forEach((chamada: any) => {
+          const dia = new Date(chamada.dataChamada).getDate();
+          diasConfirmados.add(dia);
+        });
+        
+        setDiasDesbloqueados(diasConfirmados);
+        
+        console.log('🎉 TUDO CARREGADO COM SUCESSO EM UMA ÚNICA CHAMADA!');
+        
       } catch (error) {
-        console.error('Erro:', error);
+        console.error('❌ Erro ao carregar dados:', error);
+        setAlunos([]);
+        setFrequencias({});
+        setDiasDesbloqueados(new Set());
       }
     })();
-  }, [turmaId, mes, ano, getDiasDoMes, getDataInicio, getDataFim]);
+  }, [turmaId, mes, ano, getDiasDoMes]);
 
   const diasMes = getDiasDoMes();
 
@@ -173,6 +335,7 @@ const FrequenciaAulas: React.FC = () => {
 
       {/* FILTROS */}
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 2, mb: 2 }}>
+        {/* Período */}
         <FormControl fullWidth size="small">
           <InputLabel sx={{ fontSize: '0.9rem' }}>Período</InputLabel>
           <Select
@@ -181,13 +344,17 @@ const FrequenciaAulas: React.FC = () => {
             onChange={e => setPeriodo(e.target.value)}
             sx={{ fontSize: '0.9rem' }}
           >
-            <MenuItem value="Manha">Manhã</MenuItem>
-            <MenuItem value="Tarde">Tarde</MenuItem>
-            <MenuItem value="Noite">Noite</MenuItem>
+            <MenuItem value="">Selecione</MenuItem>
+            {periodos.map(p => (
+              <MenuItem key={p} value={p} sx={{ fontSize: '0.9rem' }}>
+                {p === 'Manha' ? 'Manhã' : p === 'Noite' ? 'Noite' : 'Tarde'}
+              </MenuItem>
+            ))}
           </Select>
         </FormControl>
 
-        <FormControl fullWidth size="small">
+        {/* Turma */}
+        <FormControl fullWidth size="small" disabled={!periodo}>
           <InputLabel sx={{ fontSize: '0.9rem' }}>Turma</InputLabel>
           <Select
             value={turmaId}
@@ -196,7 +363,7 @@ const FrequenciaAulas: React.FC = () => {
             sx={{ fontSize: '0.9rem' }}
           >
             <MenuItem value="">Selecione</MenuItem>
-            {turmas.map(turma => (
+            {turmasDoPerido.map(turma => (
               <MenuItem key={turma.id} value={turma.id} sx={{ fontSize: '0.9rem' }}>
                 {turma.nome}
               </MenuItem>
@@ -204,7 +371,8 @@ const FrequenciaAulas: React.FC = () => {
           </Select>
         </FormControl>
 
-        <FormControl fullWidth size="small">
+        {/* Mês */}
+        <FormControl fullWidth size="small" disabled={!turmaId}>
           <InputLabel sx={{ fontSize: '0.9rem' }}>Mês</InputLabel>
           <Select
             value={mes}
@@ -227,7 +395,8 @@ const FrequenciaAulas: React.FC = () => {
           </Select>
         </FormControl>
 
-        <FormControl fullWidth size="small">
+        {/* Ano */}
+        <FormControl fullWidth size="small" disabled={!turmaId}>
           <InputLabel sx={{ fontSize: '0.9rem' }}>Ano</InputLabel>
           <Select
             value={ano}
@@ -246,7 +415,7 @@ const FrequenciaAulas: React.FC = () => {
       </Box>
 
       {/* TABELA */}
-      {turmaId && (
+      {turmaId && alunos.length > 0 && (
         <TableContainer component={Paper} sx={{ overflowX: 'auto', mb: 2 }}>
           <Table size="small">
             <TableHead>
@@ -346,7 +515,10 @@ const FrequenciaAulas: React.FC = () => {
                           height: 28,
                         }}
                       >
-                        {isDesbloqueado ? status : <LockOutlinedIcon sx={{ fontSize: 10, display: 'flex', margin: '0 auto' }} />}
+                        {/* Exibe o status retornado do endpoint para debug visual */}
+                        {isDesbloqueado ? status : (
+                          <LockOutlinedIcon sx={{ fontSize: 10, display: 'flex', margin: '0 auto' }} />
+                        )}
                       </TableCell>
                     );
                   })}
@@ -357,9 +529,15 @@ const FrequenciaAulas: React.FC = () => {
         </TableContainer>
       )}
 
+      {turmaId && alunos.length === 0 && (
+        <Paper sx={{ textAlign: 'center', py: 8, px: 3, color: '#999', backgroundColor: '#fafafa' }}>
+          <Box sx={{ fontSize: '1.1rem' }}>Carregando alunos da turma...</Box>
+        </Paper>
+      )}
+
       {!turmaId && (
         <Paper sx={{ textAlign: 'center', py: 8, px: 3, color: '#999', backgroundColor: '#fafafa' }}>
-          <Box sx={{ fontSize: '1.1rem' }}>Selecione uma turma para visualizar a frequência</Box>
+          <Box sx={{ fontSize: '1.1rem' }}>Selecione o período, turma, mês e ano para visualizar a frequência</Box>
         </Paper>
       )}
     </Container>
