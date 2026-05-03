@@ -166,7 +166,7 @@ const FrequenciaAulas: React.FC = () => {
       status: novoStatus
     };
 
-    fetch('http://localhost:8080/frequencias', {
+    fetch('http://localhost:8083/frequencias', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -177,7 +177,7 @@ const FrequenciaAulas: React.FC = () => {
 
   // 1. Carregar TODAS as turmas
   useEffect(() => {
-    fetch('http://localhost:8080/turmas')
+    fetch('http://localhost:8083/turmas')
       .then(r => r.json())
       .then(data => {
         setTodasAsTurmas(Array.isArray(data) ? data : []);
@@ -211,8 +211,14 @@ const FrequenciaAulas: React.FC = () => {
 
     (async () => {
       try {
+<<<<<<< Updated upstream
         console.log('🚀 CARREGANDO TUDO EM UMA ÚNICA CHAMADA!');
         console.log(`📍 Turma: ${turmaId}, Mês: ${mes}, Ano: ${ano}`);
+=======
+        const resAlunos = await fetch(`http://localhost:8083/alunos?turmaId=${turmaId}`);
+        const dataAlunos = await resAlunos.json();
+        setAlunos(dataAlunos);
+>>>>>>> Stashed changes
 
         // ⚡ UMA ÚNICA CHAMADA QUE TRAZ TUDO!
         const url = `http://localhost:8080/turmas/${turmaId}/dados-completos?mes=${mes}&ano=${ano}`;
@@ -315,6 +321,7 @@ const FrequenciaAulas: React.FC = () => {
             freqInicial[aluno.id][i] = 'C';
           }
         });
+<<<<<<< Updated upstream
         
         // Aplicar as frequências do banco, filtrando pelo mês e ano selecionados
         (dadosCompletos.frequencias || []).forEach((freq: FrequenciaResponse) => {
@@ -328,6 +335,19 @@ const FrequenciaAulas: React.FC = () => {
             anoFreq === ano
           ) {
             freqInicial[freq.aluno.id][dia] = freq.status;
+=======
+
+        const dataInicio = getDataInicio();
+        const dataFim = getDataFim();
+        const resFreq = await fetch(
+          `http://localhost:8083/frequencias?turmaId=${turmaId}&dataInicio=${dataInicio}&dataFim=${dataFim}`
+        );
+        const dataFreq = await resFreq.json();
+
+        dataFreq.forEach((freq: Frequencia) => {
+          if (freqInicial[freq.alunoId]) {
+            freqInicial[freq.alunoId][freq.dia] = freq.status;
+>>>>>>> Stashed changes
           }
         });
         
@@ -444,7 +464,11 @@ const FrequenciaAulas: React.FC = () => {
       </Box>
 
       {/* TABELA */}
+<<<<<<< Updated upstream
       {turmaId && alunos.length > 0 && (
+=======
+      {turmaId ? (
+>>>>>>> Stashed changes
         <TableContainer component={Paper} sx={{ overflowX: 'auto', mb: 2 }}>
           <Table size="small">
             <TableHead>
@@ -455,10 +479,9 @@ const FrequenciaAulas: React.FC = () => {
                 <TableCell sx={{ minWidth: 180, fontWeight: 'bold', fontSize: '0.75rem', padding: '6px 6px' }}>
                   Nome
                 </TableCell>
-                <TableCell sx={{ minWidth: 35, maxWidth: 40, fontWeight: 'bold', color: '#d32f2f', fontSize: '0.75rem', padding: '6px 3px', textAlign: 'center' }}>
+                <TableCell sx={{ minWidth: 50, maxWidth: 60, fontWeight: 'bold', color: '#d32f2f', fontSize: '0.75rem', padding: '6px 12px 6px 8px', textAlign: 'left' }}>
                   Faltas
                 </TableCell>
-
                 {/* Cabeçalho dos Dias */}
                 {Array.from({ length: diasMes }).map((_, idx) => {
                   const dia = idx + 1;
@@ -491,7 +514,6 @@ const FrequenciaAulas: React.FC = () => {
                 })}
               </TableRow>
             </TableHead>
-
             <TableBody>
               {alunos.map((aluno, idx) => (
                 <TableRow key={aluno.id} sx={{ '&:nth-of-type(odd)': { backgroundColor: '#fafafa' } }}>
@@ -501,29 +523,25 @@ const FrequenciaAulas: React.FC = () => {
                   <TableCell sx={{ minWidth: 180, padding: '5px 6px', fontSize: '0.7rem', fontWeight: '500' }}>
                     {aluno.nome}
                   </TableCell>
-                  <TableCell sx={{ minWidth: 35, maxWidth: 40, padding: '5px 3px', textAlign: 'center', fontWeight: 'bold', color: '#d32f2f', fontSize: '0.7rem' }}>
+                  <TableCell sx={{ minWidth: 50, maxWidth: 60, padding: '5px 12px 5px 8px', textAlign: 'left', fontWeight: 'bold', color: '#d32f2f', fontSize: '0.7rem' }}>
                     {contarFaltas(aluno.id)}
                   </TableCell>
-
                   {/* Células de Frequência */}
                   {Array.from({ length: diasMes }).map((_, idx) => {
                     const dia = idx + 1;
                     const isDesbloqueado = diasDesbloqueados.has(dia);
                     const status = frequencias[aluno.id]?.[dia] || 'C';
                     const isFalta = status === 'F';
-
                     const bgColor = !isDesbloqueado
                       ? '#fafafa'
                       : isFalta
                       ? '#ffcdd2'
                       : '#c8e6c9';
-
                     const textColor = !isDesbloqueado
                       ? '#999'
                       : isFalta
                       ? '#c62828'
                       : '#2e7d32';
-
                     return (
                       <TableCell
                         key={dia}
@@ -556,6 +574,7 @@ const FrequenciaAulas: React.FC = () => {
             </TableBody>
           </Table>
         </TableContainer>
+<<<<<<< Updated upstream
       )}
 
       {turmaId && alunos.length === 0 && (
@@ -565,6 +584,9 @@ const FrequenciaAulas: React.FC = () => {
       )}
 
       {!turmaId && (
+=======
+      ) : (
+>>>>>>> Stashed changes
         <Paper sx={{ textAlign: 'center', py: 8, px: 3, color: '#999', backgroundColor: '#fafafa' }}>
           <Box sx={{ fontSize: '1.1rem' }}>Selecione o período, turma, mês e ano para visualizar a frequência</Box>
         </Paper>

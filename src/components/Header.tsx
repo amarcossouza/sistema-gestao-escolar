@@ -25,7 +25,7 @@ const Header: React.FC<HeaderProps> = ({ userName, onMenuClick }) => {
   };
 
   return (
-    <AppBar position="fixed" sx={{ bgcolor: '#0072C3', color: 'white', zIndex: 1201 }}>
+    <AppBar position="fixed" sx={{ bgcolor: 'var(--accent) !important', backgroundColor: '#0072C3 !important', color: 'white', zIndex: 1201, borderRadius: '0 !important' }}>
       <Toolbar sx={{ display: 'flex', justifyContent: 'space-between' }}>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <IconButton edge="start" color="inherit" aria-label="menu" onClick={onMenuClick} sx={{ mr: 2 }}>
