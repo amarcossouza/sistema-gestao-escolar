@@ -22,23 +22,21 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ open, onClose }) => {
   return (
     <Drawer
-      variant="persistent"
+      variant="temporary"
       open={open}
       onClose={onClose}
       sx={{
-        width: open ? drawerWidth : 0,
-        flexShrink: 0,
         [`& .MuiDrawer-paper`]: {
           width: drawerWidth,
           boxSizing: 'border-box',
-          bgcolor: '#fff',
-          transition: 'width 0.3s ease-in-out',
+          bgcolor: '#f0f7ff',
+          mt: '64px',
         },
       }}
     >
         <List>
           <ListItem>
-            <ListItemText primary="Cadastros" sx={{ fontWeight: 600 }} />
+            <ListItemText primary="Cadastros" sx={{ '& .MuiListItemText-primary': { fontWeight: 700, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#0072C3' } }} />
           </ListItem>
           <ListItem disablePadding>
             <ListItemButton component={NavLink} to="/alunos">
@@ -49,7 +47,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose }) => {
           <ListItem disablePadding>
             <ListItemButton component={NavLink} to="/professores">
               <ListItemIcon><PersonIcon /></ListItemIcon>
-              <ListItemText primary="Professor" />
+              <ListItemText primary="Funcionários" />
             </ListItemButton>
           </ListItem>
           <ListItem disablePadding>
@@ -66,7 +64,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose }) => {
           </ListItem>
           <Divider sx={{ my: 1 }} />
           <ListItem>
-            <ListItemText primary="Manutenção" sx={{ fontWeight: 600 }} />
+            <ListItemText primary="Manutenção" sx={{ '& .MuiListItemText-primary': { fontWeight: 700, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#0072C3' } }} />
           </ListItem>
           <ListItem disablePadding>
             <ListItemButton component={NavLink} to="/ocorrencias">
@@ -76,7 +74,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose }) => {
           </ListItem>
            <Divider sx={{ my: 1 }} />
            <ListItem>
-             <ListItemText primary="Cadastro Escola" sx={{ fontWeight: 600 }} />
+             <ListItemText primary="Cadastro Escola" sx={{ '& .MuiListItemText-primary': { fontWeight: 700, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#0072C3' } }} />
            </ListItem>
            <ListItem disablePadding>
              <ListItemButton component={NavLink} to="/frequencia">

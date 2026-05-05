@@ -10,13 +10,7 @@ import AppRoutes from './routes';
 
 const MainLayout: React.FC = () => {
   const { user } = useAuth();
-  // Sidebar inicia aberto em desktop, fechado em mobile
-  const getInitialSidebarState = () => window.innerWidth > 900;
-  const [sidebarOpen, setSidebarOpen] = React.useState(getInitialSidebarState);
-  React.useEffect(() => {
-    // Ao redimensionar, não fecha o menu automaticamente
-    // O menu só fecha/abre pelo hambúrguer
-  }, []);
+  const [sidebarOpen, setSidebarOpen] = React.useState(false);
 
   if (!user) return <Navigate to="/login" replace />;
 

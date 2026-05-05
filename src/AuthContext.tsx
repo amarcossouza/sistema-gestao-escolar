@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 
+const API_URL = import.meta.env.VITE_API_URL as string;
+
 interface AuthContextType {
   user: string | null;
   login: (email: string) => void;
@@ -25,7 +27,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [user]);
 
   const login = (email: string) => setUser(email);
-  const logout = () => setUser(null);
+  const logout = () => {
+    fetch(`${API_URL}/logout`, { method: 'POST' }).finally(() => setUser(null));
+  };
   const value = React.useMemo(() => ({ user, login, logout }), [user]);
 
   return (

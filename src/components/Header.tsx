@@ -32,7 +32,7 @@ const Header: React.FC<HeaderProps> = ({ userName, onMenuClick }) => {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" fontWeight={600} fontFamily="Schibsted Grotesk">
-            ERP Escola
+            ERP - Figueiredo Ferraz
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

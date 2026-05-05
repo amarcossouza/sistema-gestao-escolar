@@ -16,6 +16,7 @@ import {
   Paper,
 } from '@mui/material';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import API_URL from '../config';
 
 interface Turma {
   id: number;
@@ -87,7 +88,7 @@ const FrequenciaAulas: React.FC = () => {
       
       // Remove confirmação da chamada (opcional - backend tem DELETE mas diz que é só admin)
       const dataChamada = new Date(ano, mes - 1, dia).toISOString().split('T')[0];
-      fetch(`http://localhost:8080/chamada-confirmada?turmaId=${turmaId}&dataChamada=${dataChamada}`, {
+      fetch(`${API_URL}/chamada-confirmada?turmaId=${turmaId}&dataChamada=${dataChamada}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' }
       }).catch(e => console.log('Não foi possível remover confirmação:', e));
@@ -118,7 +119,7 @@ const FrequenciaAulas: React.FC = () => {
       
       console.log('📤 Confirmando chamada:', payload);
       
-      fetch('http://localhost:8080/chamada-confirmada', {
+      fetch(`${API_URL}/chamada-confirmada`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -166,7 +167,7 @@ const FrequenciaAulas: React.FC = () => {
       status: novoStatus
     };
 
-    fetch('http://localhost:8083/frequencias', {
+    fetch(`${API_URL}/frequencias`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -177,7 +178,7 @@ const FrequenciaAulas: React.FC = () => {
 
   // 1. Carregar TODAS as turmas
   useEffect(() => {
-    fetch('http://localhost:8083/turmas')
+    fetch(`${API_URL}/turmas`)
       .then(r => r.json())
       .then(data => {
         setTodasAsTurmas(Array.isArray(data) ? data : []);
@@ -211,17 +212,11 @@ const FrequenciaAulas: React.FC = () => {
 
     (async () => {
       try {
-<<<<<<< Updated upstream
         console.log('🚀 CARREGANDO TUDO EM UMA ÚNICA CHAMADA!');
         console.log(`📍 Turma: ${turmaId}, Mês: ${mes}, Ano: ${ano}`);
-=======
-        const resAlunos = await fetch(`http://localhost:8083/alunos?turmaId=${turmaId}`);
-        const dataAlunos = await resAlunos.json();
-        setAlunos(dataAlunos);
->>>>>>> Stashed changes
 
         // ⚡ UMA ÚNICA CHAMADA QUE TRAZ TUDO!
-        const url = `http://localhost:8080/turmas/${turmaId}/dados-completos?mes=${mes}&ano=${ano}`;
+        const url = `${API_URL}/turmas/${turmaId}/dados-completos?mes=${mes}&ano=${ano}`;
         const response = await fetch(url);
 
         if (!response.ok) {
@@ -229,7 +224,7 @@ const FrequenciaAulas: React.FC = () => {
           console.warn('⚠️ Endpoint dados-completos falhou, usando método antigo...');
 
           // Método antigo de fallback
-          const resAlunos = await fetch('http://localhost:8080/alunos');
+          const resAlunos = await fetch(`${API_URL}/alunos`);
           let todosAlunos = [];
           if (resAlunos.ok) {
             const text = await resAlunos.text();
@@ -243,7 +238,7 @@ const FrequenciaAulas: React.FC = () => {
           const dataFim = `${ano}-${String(mes).padStart(2, '0')}-${String(ultimoDia).padStart(2, '0')}`;
 
           const resFreq = await fetch(
-            `http://localhost:8080/frequencias?turmaId=${turmaId}&dataInicio=${dataInicio}&dataFim=${dataFim}`
+            `${API_URL}/frequencias?turmaId=${turmaId}&dataInicio=${dataInicio}&dataFim=${dataFim}`
           );
           let dataFreq = [];
           if (resFreq.ok) {
@@ -271,7 +266,7 @@ const FrequenciaAulas: React.FC = () => {
           setFrequencias(freqInicial);
 
           const resChamadas = await fetch(
-            `http://localhost:8080/chamada-confirmada?turmaId=${turmaId}&dataInicio=${dataInicio}&dataFim=${dataFim}`
+            `${API_URL}/chamada-confirmada?turmaId=${turmaId}&dataInicio=${dataInicio}&dataFim=${dataFim}`
           );
           if (resChamadas.ok) {
             const text = await resChamadas.text();
@@ -294,7 +289,7 @@ const FrequenciaAulas: React.FC = () => {
         }
         
         // ✅ SUCESSO - Processar dados da ÚNICA chamada
-        let dadosCompletos = {};
+        let dadosCompletos: { alunos?: Aluno[]; frequencias?: FrequenciaResponse[]; chamadasConfirmadas?: any[] } = {};
         const text = await response.text();
         if (text) {
           dadosCompletos = JSON.parse(text);
@@ -321,7 +316,6 @@ const FrequenciaAulas: React.FC = () => {
             freqInicial[aluno.id][i] = 'C';
           }
         });
-<<<<<<< Updated upstream
         
         // Aplicar as frequências do banco, filtrando pelo mês e ano selecionados
         (dadosCompletos.frequencias || []).forEach((freq: FrequenciaResponse) => {
@@ -335,19 +329,6 @@ const FrequenciaAulas: React.FC = () => {
             anoFreq === ano
           ) {
             freqInicial[freq.aluno.id][dia] = freq.status;
-=======
-
-        const dataInicio = getDataInicio();
-        const dataFim = getDataFim();
-        const resFreq = await fetch(
-          `http://localhost:8083/frequencias?turmaId=${turmaId}&dataInicio=${dataInicio}&dataFim=${dataFim}`
-        );
-        const dataFreq = await resFreq.json();
-
-        dataFreq.forEach((freq: Frequencia) => {
-          if (freqInicial[freq.alunoId]) {
-            freqInicial[freq.alunoId][freq.dia] = freq.status;
->>>>>>> Stashed changes
           }
         });
         
@@ -464,11 +445,7 @@ const FrequenciaAulas: React.FC = () => {
       </Box>
 
       {/* TABELA */}
-<<<<<<< Updated upstream
       {turmaId && alunos.length > 0 && (
-=======
-      {turmaId ? (
->>>>>>> Stashed changes
         <TableContainer component={Paper} sx={{ overflowX: 'auto', mb: 2 }}>
           <Table size="small">
             <TableHead>
@@ -574,7 +551,6 @@ const FrequenciaAulas: React.FC = () => {
             </TableBody>
           </Table>
         </TableContainer>
-<<<<<<< Updated upstream
       )}
 
       {turmaId && alunos.length === 0 && (
@@ -584,9 +560,6 @@ const FrequenciaAulas: React.FC = () => {
       )}
 
       {!turmaId && (
-=======
-      ) : (
->>>>>>> Stashed changes
         <Paper sx={{ textAlign: 'center', py: 8, px: 3, color: '#999', backgroundColor: '#fafafa' }}>
           <Box sx={{ fontSize: '1.1rem' }}>Selecione o período, turma, mês e ano para visualizar a frequência</Box>
         </Paper>

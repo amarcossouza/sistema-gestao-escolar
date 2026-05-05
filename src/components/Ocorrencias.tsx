@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Box, TextField } from '@mui/material';
+import API_URL from '../config';
 
 interface Ocorrencia {
   id: number;
@@ -22,17 +23,17 @@ const Ocorrencias: React.FC = () => {
   const [filtroTurma, setFiltroTurma] = useState('');
 
   useEffect(() => {
-    fetch('http://localhost:8083/ocorrencias')
+    fetch(`${API_URL}/ocorrencias`)
       .then(r => r.json())
       .then(data => setOcorrencias(Array.isArray(data) ? data : []))
       .catch(() => setOcorrencias([]));
     
-    fetch('http://localhost:8083/alunos')
+    fetch(`${API_URL}/alunos`)
       .then(r => r.json())
       .then(data => setAlunos(Array.isArray(data) ? data : []))
       .catch(() => setAlunos([]));
     
-    fetch('http://localhost:8083/turmas')
+    fetch(`${API_URL}/turmas`)
       .then(r => r.json())
       .then(data => setTurmas(Array.isArray(data) ? data : []))
       .catch(() => setTurmas([]));
@@ -48,8 +49,8 @@ const Ocorrencias: React.FC = () => {
 
   return (
     <Box sx={{ maxWidth: 1200, mx: 'auto', mt: 4 }}>
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h6" mb={2}>Lista de Ocorrências</Typography>
+      <Paper sx={{ p: 3, mb: 3, borderLeft: '3px solid #0072C3' }}>
+        <Typography variant="h6" mb={2} sx={{ borderBottom: '2px solid #e3f2fd', pb: 1 }}>Lista de Ocorrências</Typography>
         <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
           <TextField
             label="Filtrar por aluno"

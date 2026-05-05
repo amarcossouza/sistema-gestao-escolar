@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Box, TextField, Button, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton, Stack, MenuItem, Select, InputLabel, FormControl } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
+import API_URL from '../config';
 
 interface Turma {
   id: number;
@@ -29,7 +30,7 @@ const TurmaForm: React.FC = () => {
   const [editId, setEditId] = useState<number | null>(null);
 
   useEffect(() => {
-    fetch('http://localhost:8083/turmas')
+    fetch(`${API_URL}/turmas`)
       .then(res => res.json())
       .then(data => setTurmas(data));
   }, []);
@@ -38,7 +39,7 @@ const TurmaForm: React.FC = () => {
     e.preventDefault();
     if (!nome || !periodo || !anoLetivo) return;
     if (editId === null) {
-      fetch('http://localhost:8083/turmas', {
+      fetch(`${API_URL}/turmas`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nome, periodo, anoLetivo: Number(anoLetivo), escola: { id: 1, nome: '' } })
@@ -52,7 +53,7 @@ const TurmaForm: React.FC = () => {
           setEditId(null);
         });
     } else {
-      fetch(`http://localhost:8083/turmas/${editId}`, {
+      fetch(`${API_URL}/turmas/${editId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nome, periodo, anoLetivo: Number(anoLetivo), escola: { id: 1, nome: '' } })
@@ -88,8 +89,8 @@ const TurmaForm: React.FC = () => {
 
   return (
     <Box sx={{ maxWidth: 1000, mx: 'auto', mt: 4 }}>
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h6" mb={2}>Cadastro de Turma</Typography>
+      <Paper sx={{ p: 3, mb: 3, borderLeft: '3px solid #0072C3' }}>
+        <Typography variant="h6" mb={2} sx={{ borderBottom: '2px solid #e3f2fd', pb: 1 }}>Cadastro de Turma</Typography>
         <Box component="form" display="flex" flexDirection="row" gap={2} alignItems="center" onSubmit={handleSubmit}>
           <TextField label="Nome da Turma" value={nome} onChange={e => setNome(e.target.value)} required fullWidth InputProps={{ sx: { fontSize: 14 } }} InputLabelProps={{ sx: { fontSize: 14 } }} />
           <FormControl sx={{ minWidth: 140 }} required>

@@ -67,7 +67,8 @@ label, .MuiInputLabel-root {
 .MuiPaper-root {
   background: #fff !important;
   border-radius: 12px !important;
-  box-shadow: var(--shadow) !important;
+  box-shadow: 0 2px 8px rgba(0, 114, 195, 0.08) !important;
+  border: 1px solid #d0e4f7 !important;
 }
 
 .MuiTableCell-root {
@@ -95,8 +96,25 @@ label, .MuiInputLabel-root {
 }
 
 .MuiDrawer-paper {
-  background: #fff !important;
-  border-right: 1px solid var(--border) !important;
+  background: #f0f7ff !important;
+  border-right: 1px solid #d0e4f7 !important;
+}
+
+.MuiTableHead-root .MuiTableCell-root {
+  background-color: #e3f2fd !important;
+  color: #0557a0 !important;
+  font-weight: 600 !important;
+}
+
+.MuiDrawer-paper .MuiListItemButton-root.active {
+  background-color: #daeeff !important;
+  border-radius: 6px !important;
+}
+
+.MuiDrawer-paper .MuiListItemButton-root.active .MuiListItemIcon-root,
+.MuiDrawer-paper .MuiListItemButton-root.active .MuiListItemText-primary {
+  color: #0072C3 !important;
+  font-weight: 600 !important;
 }
 
 #root {

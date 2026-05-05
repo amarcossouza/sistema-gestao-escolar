@@ -1,6 +1,7 @@
 import { useAuth } from '../AuthContext';
 import React, { useEffect, useState } from 'react';
 import { Box, TextField, Button, Typography, Paper, MenuItem, Select, InputLabel, FormControl, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
+import API_URL from '../config';
 
 interface Aluno { id: number; nome: string; turmaId?: number; turma?: { id: number; nome: string }; }
 interface Turma { id: number; nome: string; periodo?: string; }
@@ -25,7 +26,7 @@ const OcorrenciaForm: React.FC = () => {
 
   useEffect(() => {
     // Busca todos os alunos (com turmaId no response)
-    fetch('http://localhost:8083/alunos')
+    fetch(`${API_URL}/alunos`)
       .then(r => r.json())
       .then(data => {
         console.log('Alunos carregados:', data);
@@ -37,7 +38,7 @@ const OcorrenciaForm: React.FC = () => {
       });
     
     // Busca todas as turmas
-    fetch('http://localhost:8083/turmas')
+    fetch(`${API_URL}/turmas`)
       .then(r => r.json())
       .then(data => {
         console.log('Turmas carregadas:', data);
@@ -49,7 +50,7 @@ const OcorrenciaForm: React.FC = () => {
       });
     
     // Busca tipos de ocorrências ativas
-    fetch('http://localhost:8083/api/tipos-ocorrencias/ativos')
+    fetch(`${API_URL}/api/tipos-ocorrencias/ativos`)
       .then(r => r.json())
       .then(data => {
         console.log('Tipos de ocorrências:', data);
@@ -65,7 +66,7 @@ const OcorrenciaForm: React.FC = () => {
   useEffect(() => {
     if (periodo) {
       // Opção 1: Usar endpoint de período se disponível
-      // fetch(`http://localhost:8083/turmas/por-periodo/${periodo}`)
+      // fetch(`${API_URL}/turmas/por-periodo/${periodo}`)
       
       // Opção 2: Filtrar localmente (mais simples)
       const turmasFiltered = turmas.filter(t => 
@@ -118,12 +119,12 @@ const OcorrenciaForm: React.FC = () => {
 
   useEffect(() => {
     if (alunoId && turmaId) {
-      fetch(`http://localhost:8083/ocorrencias/aluno/${alunoId}/turma/${turmaId}`)
+      fetch(`${API_URL}/ocorrencias/aluno/${alunoId}/turma/${turmaId}`)
         .then(r => r.json())
         .then(data => Array.isArray(data) ? setOcorrenciasAluno(data) : setOcorrenciasAluno([]))
         .catch(() => setOcorrenciasAluno([]));
     } else if (alunoId) {
-      fetch(`http://localhost:8083/ocorrencias/aluno/${alunoId}`)
+      fetch(`${API_URL}/ocorrencias/aluno/${alunoId}`)
         .then(r => r.json())
         .then(data => Array.isArray(data) ? setOcorrenciasAluno(data) : setOcorrenciasAluno([]))
         .catch(() => setOcorrenciasAluno([]));
@@ -152,7 +153,7 @@ const OcorrenciaForm: React.FC = () => {
       nomeProfessor: nomeOuEmail
     };
     console.log('Dados sendo enviados:', payload);
-    fetch('http://localhost:8083/ocorrencias', {
+    fetch(`${API_URL}/ocorrencias`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -169,12 +170,12 @@ const OcorrenciaForm: React.FC = () => {
       alert('Ocorrência salva com sucesso!');
       // Recarrega as ocorrências do aluno/turma selecionados
       if (alunoId && turmaId) {
-        fetch(`http://localhost:8083/ocorrencias/aluno/${alunoId}/turma/${turmaId}`)
+        fetch(`${API_URL}/ocorrencias/aluno/${alunoId}/turma/${turmaId}`)
           .then(r => r.json())
           .then(data => Array.isArray(data) ? setOcorrenciasAluno(data) : setOcorrenciasAluno([]))
           .catch(() => setOcorrenciasAluno([]));
       } else if (alunoId) {
-        fetch(`http://localhost:8083/ocorrencias/aluno/${alunoId}`)
+        fetch(`${API_URL}/ocorrencias/aluno/${alunoId}`)
           .then(r => r.json())
           .then(data => Array.isArray(data) ? setOcorrenciasAluno(data) : setOcorrenciasAluno([]))
           .catch(() => setOcorrenciasAluno([]));
