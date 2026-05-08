@@ -14,9 +14,14 @@ import {
   TableCell,
   Checkbox,
   Paper,
+  Button,
+  CircularProgress,
 } from '@mui/material';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import API_URL from '../config';
+import { exportarFrequenciaPdf } from '../services/frequenciaExportService';
+import { downloadPdf } from '../utils/downloadUtils';
+import { canMarkDay } from '../domain/validators/FrequenciaDateValidator';
 
 interface Turma {
   id: number;
@@ -41,6 +46,20 @@ interface FrequenciaResponse {
 const periodos = ['Manha', 'Tarde', 'Noite'];
 
 const FrequenciaAulas: React.FC = () => {
+  const [exportandoPdf, setExportandoPdf] = useState(false);
+
+  const handleExportarPdf = async () => {
+    if (!turmaId || !mes || !ano) return;
+    setExportandoPdf(true);
+    try {
+      const blob = await exportarFrequenciaPdf({ turmaId: Number(turmaId), mes, ano });
+      downloadPdf(blob, `relatorio-frequencia-turma${turmaId}-${mes}-${ano}.pdf`);
+    } catch (e) {
+      alert('Erro ao exportar PDF. Verifique se o servidor está disponível.');
+    } finally {
+      setExportandoPdf(false);
+    }
+  };
   // Estado geral
   const [periodo, setPeriodo] = useState<string>('');
   const [turmaId, setTurmaId] = useState<number | string>('');
@@ -81,66 +100,42 @@ const FrequenciaAulas: React.FC = () => {
   };
 
   const toggleDia = (dia: number) => {
-    const novosDias = new Set(diasDesbloqueados);
-    if (novosDias.has(dia)) {
-      // Se está desmarcando, remove
-      novosDias.delete(dia);
-      
-      // Remove confirmação da chamada (opcional - backend tem DELETE mas diz que é só admin)
-      const dataChamada = new Date(ano, mes - 1, dia).toISOString().split('T')[0];
+    if (!canMarkDay(dia, ano, mes)) return;
+
+    const jaDesbloqueado = diasDesbloqueados.has(dia);
+    const dataChamada = `${ano}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+
+    // Atualiza o estado usando updater funcional para evitar stale closure
+    setDiasDesbloqueados(prev => {
+      const novo = new Set(prev);
+      if (jaDesbloqueado) {
+        novo.delete(dia);
+      } else {
+        novo.add(dia);
+      }
+      return novo;
+    });
+
+    if (jaDesbloqueado) {
       fetch(`${API_URL}/chamada-confirmada?turmaId=${turmaId}&dataChamada=${dataChamada}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' }
       }).catch(e => console.log('Não foi possível remover confirmação:', e));
-      
     } else {
-      // Se está marcando, adiciona
-      novosDias.add(dia);
-      setFrequencias(prev => {
-        const novo = { ...prev };
-        alunos.forEach(aluno => {
-          if (!novo[aluno.id]) novo[aluno.id] = {};
-          if (novo[aluno.id][dia] === undefined) novo[aluno.id][dia] = 'C';
-        });
-        return novo;
-      });
-      
-      // ✅ SALVA CONFIRMAÇÃO DA CHAMADA NO BACKEND
-      const dataChamada = new Date(ano, mes - 1, dia).toISOString().split('T')[0];
-      const dataHoraConfirmacao = new Date().toISOString();
-      const emailProfessor = localStorage.getItem('userEmail') || 'professor@escola.com';
-      
       const payload = {
         turmaId: Number(turmaId),
-        dataChamada: dataChamada,
-        dataHoraConfirmacao: dataHoraConfirmacao,
-        emailProfessor: emailProfessor
+        dataChamada,
+        dataHoraConfirmacao: new Date().toISOString(),
+        emailProfessor: localStorage.getItem('userEmail') || 'professor@escola.com'
       };
-      
-      console.log('📤 Confirmando chamada:', payload);
-      
       fetch(`${API_URL}/chamada-confirmada`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       })
-      .then(r => {
-        if (r.ok) {
-          console.log('✅ Chamada confirmada para dia', dia);
-          return r.json();
-        } else {
-          throw new Error('Erro ao confirmar chamada');
-        }
-      })
-      .then(data => {
-        console.log('✅ Resposta do servidor:', data);
-      })
-      .catch(e => {
-        console.error('❌ Erro ao confirmar chamada:', e);
-        alert('Erro ao confirmar chamada. Tente novamente.');
-      });
+      .then(r => { if (!r.ok) throw new Error('Erro ao confirmar chamada'); })
+      .catch(e => console.error('❌ Erro ao confirmar chamada:', e));
     }
-    setDiasDesbloqueados(novosDias);
   };
 
   const toggleFrequencia = (alunoId: number, dia: number) => {
@@ -155,7 +150,7 @@ const FrequenciaAulas: React.FC = () => {
       }
     }));
 
-    const dataClicada = new Date(ano, mes - 1, dia).toISOString().split('T')[0];
+    const dataClicada = `${ano}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
     const payload = {
       aluno: {
         id: alunoId
@@ -167,11 +162,20 @@ const FrequenciaAulas: React.FC = () => {
       status: novoStatus
     };
 
+    console.log('📤 Payload enviado para /frequencias:', JSON.stringify(payload));
     fetch(`${API_URL}/frequencias`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
-    }).catch(e => console.error('Erro salvar:', e));
+    })
+    .then(async r => {
+      if (!r.ok) {
+        const corpo = await r.text();
+        console.error(`❌ Erro HTTP ${r.status} - Resposta do backend:`, corpo);
+        throw new Error(`Erro HTTP ${r.status} ao salvar frequência`);
+      }
+    })
+    .catch(e => console.error('Erro salvar:', e));
   };
 
   // ===== EFFECTS =====
@@ -257,7 +261,7 @@ const FrequenciaAulas: React.FC = () => {
           });
 
           dataFreq.forEach((freq: FrequenciaResponse) => {
-            const dia = new Date(freq.data).getDate();
+            const dia = parseInt(freq.data.substring(8, 10), 10);
             if (freqInicial[freq.aluno.id]) {
               freqInicial[freq.aluno.id][dia] = freq.status;
             }
@@ -274,7 +278,7 @@ const FrequenciaAulas: React.FC = () => {
               const chamadasConfirmadas = JSON.parse(text);
               const diasConfirmados = new Set<number>();
               chamadasConfirmadas.forEach((chamada: any) => {
-                const dia = new Date(chamada.dataChamada).getDate();
+                const dia = parseInt(chamada.dataChamada.substring(8, 10), 10);
                 diasConfirmados.add(dia);
               });
               setDiasDesbloqueados(diasConfirmados);
@@ -319,10 +323,8 @@ const FrequenciaAulas: React.FC = () => {
         
         // Aplicar as frequências do banco, filtrando pelo mês e ano selecionados
         (dadosCompletos.frequencias || []).forEach((freq: FrequenciaResponse) => {
-          const dataObj = new Date(freq.data);
-          const dia = dataObj.getDate();
-          const mesFreq = dataObj.getMonth() + 1;
-          const anoFreq = dataObj.getFullYear();
+          const [anoFreq, mesFreq, diaNum] = freq.data.substring(0, 10).split('-').map(Number);
+          const dia = diaNum;
           if (
             freqInicial[freq.aluno.id] &&
             mesFreq === mes &&
@@ -338,7 +340,7 @@ const FrequenciaAulas: React.FC = () => {
         // 3️⃣ Processar CHAMADAS CONFIRMADAS (checkboxes)
         const diasConfirmados = new Set<number>();
         (dadosCompletos.chamadasConfirmadas || []).forEach((chamada: any) => {
-          const dia = new Date(chamada.dataChamada).getDate();
+          const dia = parseInt(chamada.dataChamada.substring(8, 10), 10);
           diasConfirmados.add(dia);
         });
         
@@ -358,9 +360,21 @@ const FrequenciaAulas: React.FC = () => {
   const diasMes = getDiasDoMes();
 
   return (
+
     <Container maxWidth="xl" sx={{ py: 2, px: 1 }}>
-      <Box sx={{ mb: 2 }}>
+      <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <h2 style={{ margin: 0, fontSize: '1.8rem' }}>Frequência de Aulas</h2>
+        <Box>
+          <Button
+            variant="contained"
+            onClick={handleExportarPdf}
+            disabled={!turmaId || exportandoPdf}
+            startIcon={exportandoPdf ? <CircularProgress size={16} color="inherit" /> : null}
+            sx={{ fontWeight: 600, textTransform: 'none', fontSize: '0.95rem' }}
+          >
+            {exportandoPdf ? 'Gerando PDF...' : 'Exportar PDF'}
+          </Button>
+        </Box>
       </Box>
 
       {/* FILTROS */}
@@ -483,7 +497,7 @@ const FrequenciaAulas: React.FC = () => {
                           onChange={() => toggleDia(dia)}
                           sx={{ width: 10, height: 10, p: 0, m: 0, '& .MuiSvgIcon-root': { fontSize: '0.9rem' } }}
                         />
-                        <Box sx={{ fontSize: '0.55rem', fontWeight: 'bold', lineHeight: 1 }}>{dia}</Box>
+                        <Box sx={{ fontSize: '0.55rem', fontWeight: 'bold', lineHeight: 1, mt: '1px' }}>{dia}</Box>
                         <Box sx={{ fontSize: '0.5rem', color: '#666', lineHeight: 1 }}>{getDiaDaSemana(dia)}</Box>
                       </Box>
                     </TableCell>

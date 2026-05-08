@@ -18,7 +18,7 @@ export async function exportarFrequenciaPdf(
   request: FrequenciaExportRequest
 ): Promise<Blob> {
   try {
-    const response = await fetch('http://localhost:8083/relatorios/frequencia/pdf', {
+    const response = await fetch('http://localhost:8080/relatorios/frequencia/pdf', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
