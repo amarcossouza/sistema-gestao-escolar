@@ -8,6 +8,7 @@ import EventNoteIcon from '@mui/icons-material/EventNote';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
 import ChecklistIcon from '@mui/icons-material/Checklist';
+import DashboardRoundedIcon from '@mui/icons-material/DashboardRounded';
 import { NavLink } from 'react-router-dom';
 
 const drawerWidth = 220;
@@ -35,6 +36,13 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose }) => {
       }}
     >
         <List>
+          <ListItem disablePadding>
+            <ListItemButton component={NavLink} to="/">
+              <ListItemIcon><DashboardRoundedIcon /></ListItemIcon>
+              <ListItemText primary="Dashboard" />
+            </ListItemButton>
+          </ListItem>
+          <Divider sx={{ my: 1 }} />
           <ListItem>
             <ListItemText primary="Cadastros" sx={{ '& .MuiListItemText-primary': { fontWeight: 700, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#0072C3' } }} />
           </ListItem>

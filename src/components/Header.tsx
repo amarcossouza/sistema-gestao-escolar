@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { AppBar, Toolbar, Typography, Box, IconButton, Menu, MenuItem, Avatar } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
-import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import PersonOutlineRoundedIcon from '@mui/icons-material/PersonOutlineRounded';
 import { useAuth } from '../AuthContext';
 
 interface HeaderProps {
@@ -37,9 +37,25 @@ const Header: React.FC<HeaderProps> = ({ userName, onMenuClick }) => {
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Typography variant="body1" sx={{ fontWeight: 500, mr: 1 }}>{userName}</Typography>
-          <IconButton color="inherit" onClick={handleMenu}>
-            <Avatar sx={{ bgcolor: '#fff', color: '#0072C3', width: 32, height: 32 }}>
-              <AccountCircleIcon />
+          <IconButton
+            color="inherit"
+            onClick={handleMenu}
+            sx={{
+              p: 0.3,
+              borderRadius: 999,
+              '&:hover': { backgroundColor: 'rgba(255,255,255,0.12)' },
+            }}
+          >
+            <Avatar
+              sx={{
+                bgcolor: 'rgba(255,255,255,0.96)',
+                color: '#0b6db5',
+                width: 29,
+                height: 29,
+                boxShadow: '0 0 0 1px rgba(255,255,255,0.55) inset',
+              }}
+            >
+              <PersonOutlineRoundedIcon sx={{ fontSize: 18 }} />
             </Avatar>
           </IconButton>
           <Menu
