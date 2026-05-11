@@ -15,6 +15,8 @@ RUN npm install
 
 COPY . .
 
+RUN rm -rf dist
+
 RUN npm run build -- --mode hml
 
 # PRODUÇÃO

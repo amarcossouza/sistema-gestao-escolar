@@ -29,6 +29,7 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+
 echo "ENVIANDO IMAGEM PARA SERVIDOR..."
 
 scp frontend-react-hml.tar.gz root@134.209.164.87:/opt/docker/
@@ -40,13 +41,31 @@ fi
 
 echo "EXECUTANDO DEPLOY REMOTO..."
 
-ssh root@134.209.164.87 << EOF
+ssh root@134.209.164.87 /bin/bash << EOF
+
+set -e
+
+echo "====================================="
+echo "PARANDO CONTAINER ANTIGO"
+echo "====================================="
 
 docker stop frontend-react-hml || true
 
+echo "====================================="
+echo "REMOVENDO CONTAINER ANTIGO"
+echo "====================================="
+
 docker rm frontend-react-hml || true
 
+echo "====================================="
+echo "CARREGANDO IMAGEM"
+echo "====================================="
+
 gunzip -c /opt/docker/frontend-react-hml.tar.gz | docker load
+
+echo "====================================="
+echo "SUBINDO CONTAINER"
+echo "====================================="
 
 docker run -d \
 --name frontend-react-hml \
@@ -55,19 +74,28 @@ docker run -d \
 frontend-react-hml:$TAG
 
 echo "====================================="
-echo "VALIDANDO CONTAINER..."
+echo "VALIDANDO CONTAINER"
 echo "====================================="
 
 docker ps | grep frontend-react-hml
 
 if [ \$? -ne 0 ]; then
-    echo "ERRO: container frontend-react-hml nao subiu"
+    echo "ERRO: CONTAINER NAO SUBIU"
     exit 1
 fi
 
+echo "====================================="
 echo "CONTAINER OK"
+echo "====================================="
 
 EOF
+
+if [ $? -ne 0 ]; then
+    echo "====================================="
+    echo "ERRO NO DEPLOY REMOTO"
+    echo "====================================="
+    exit 1
+fi
 
 echo "====================================="
 echo "DEPLOY FINALIZADO"

@@ -3,23 +3,22 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './AuthContext';
 import Login from './components/Login';
+import AppRoutes from './routes';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import PageLayout from './components/PageLayout';
-import AppRoutes from './routes';
 
 const MainLayout: React.FC = () => {
   const { user } = useAuth();
-  const [sidebarOpen, setSidebarOpen] = React.useState(false);
 
   if (!user) return <Navigate to="/login" replace />;
 
+  const [sidebarOpen, setSidebarOpen] = React.useState(false);
   return (
     <PageLayout>
       <Header userName={user} onMenuClick={() => setSidebarOpen((open) => !open)} />
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div style={{ flex: 1, padding: 24, overflow: 'auto', marginTop: 64 }}>
-        <h1>TESTE 123456</h1>
         <AppRoutes />
       </div>
     </PageLayout>
