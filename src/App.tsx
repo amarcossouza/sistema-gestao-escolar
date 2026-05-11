@@ -19,6 +19,7 @@ const MainLayout: React.FC = () => {
       <Header userName={user} onMenuClick={() => setSidebarOpen((open) => !open)} />
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div style={{ flex: 1, padding: 24, overflow: 'auto', marginTop: 64 }}>
+        <h1>TESTE 123456</h1>
         <AppRoutes />
       </div>
     </PageLayout>
@@ -26,9 +27,10 @@ const MainLayout: React.FC = () => {
 };
 
 const App: React.FC = () => {
+  // Sempre usa basename '/escola' para simular produção também em desenvolvimento
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <BrowserRouter basename="/escola">
         <Routes>
           <Route path="/login" element={<LoginFullScreen />} />
           <Route path="/*" element={<MainLayout />} />

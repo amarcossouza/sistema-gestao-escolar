@@ -7,5 +7,5 @@ if [ -z "$TAG" ]; then
     exit 1
 fi
 
-docker build \
+docker build --no-cache \
 -t frontend-react-hml:$TAG .

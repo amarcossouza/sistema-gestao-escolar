@@ -1,6 +1,7 @@
 /**
  * Serviço para exportar relatórios de frequência
  */
+import API_URL from '../config';
 
 export interface FrequenciaExportRequest {
   turmaId: number;
@@ -18,16 +19,18 @@ export async function exportarFrequenciaPdf(
   request: FrequenciaExportRequest
 ): Promise<Blob> {
   try {
-    const response = await fetch('http://localhost:8080/relatorios/frequencia/pdf', {
+    const response = await fetch(`${API_URL}/relatorios/frequencia/pdf`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Accept: 'application/pdf',
       },
       body: JSON.stringify(request),
     });
 
     if (!response.ok) {
-      throw new Error(`Erro ao gerar relatório: ${response.status}`);
+      const message = await response.text();
+      throw new Error(message || `Erro ao gerar relatório: ${response.status}`);
     }
 
     return await response.blob();

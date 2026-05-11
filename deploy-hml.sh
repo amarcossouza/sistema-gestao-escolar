@@ -54,6 +54,19 @@ docker run -d \
 --restart always \
 frontend-react-hml:$TAG
 
+echo "====================================="
+echo "VALIDANDO CONTAINER..."
+echo "====================================="
+
+docker ps | grep frontend-react-hml
+
+if [ \$? -ne 0 ]; then
+    echo "ERRO: container frontend-react-hml nao subiu"
+    exit 1
+fi
+
+echo "CONTAINER OK"
+
 EOF
 
 echo "====================================="
